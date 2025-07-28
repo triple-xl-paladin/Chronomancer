@@ -1,0 +1,69 @@
+# Flutter/Dart/Pub related
+.dart_tool/
+.packages
+.pub-cache/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.flutter-versions
+.melos_tool/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# IntelliJ/Android Studio
+.idea/
+*.iml
+
+# macOS
+.DS_Store
+
+# Linux
+*.swp
+*~
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# iOS/Xcode
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Pods/
+ios/.symlinks/
+ios/Runner.xcworkspace/
+ios/build/
+ios/.flutter-plugins
+ios/.flutter-plugins-dependencies
+ios/.generated/
+ios/.dart_tool/
+
+# Android/Gradle
+android/.gradle/
+android/captures/
+android/app/build/
+android/local.properties
+
+# Web
+web/.dart_tool/
+web/build/
+
+# Firebase
+firebase.json
+
+# Test outputs
+coverage/
+
+# Symbolic links created manually (e.g. by pub global activate --path)
+bin/cache/
+
+# Other
+*.log
+*.tmp
+*.lock
+
+# Personal
+*.key
+.env
