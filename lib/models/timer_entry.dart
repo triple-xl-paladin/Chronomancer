@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'package:hive/hive.dart';
-
 part 'timer_entry.g.dart';
 
 @HiveType(typeId: 0)

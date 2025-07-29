@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:foodtimer/screens/timer_screen.dart';
+import 'package:chronomancer/screens/timer_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 //import 'package:path_provider/path_provider.dart';
-import 'package:foodtimer/models/timer_entry.dart';
+import 'package:chronomancer/models/timer_entry.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

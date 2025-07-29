@@ -1,11 +1,7 @@
 import 'dart:async';
-
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-
-import 'package:foodtimer/models/timer_entry.dart';
-import 'package:foodtimer/services/timer_service.dart';
+import 'package:chronomancer/models/timer_entry.dart';
+import 'package:chronomancer/services/timer_service.dart';
 
 class TimerScreen extends StatefulWidget {
   const TimerScreen({super.key});
