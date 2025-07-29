@@ -22,13 +22,14 @@ class TimerEntryAdapter extends TypeAdapter<TimerEntry> {
       remainingSeconds: fields[2] as int,
       isRunning: fields[3] as bool,
       groupName: fields[4] as String?,
+      nextTimerId: fields[5] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TimerEntry obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.label)
       ..writeByte(1)
@@ -38,7 +39,9 @@ class TimerEntryAdapter extends TypeAdapter<TimerEntry> {
       ..writeByte(3)
       ..write(obj.isRunning)
       ..writeByte(4)
-      ..write(obj.groupName);
+      ..write(obj.groupName)
+      ..writeByte(5)
+      ..write(obj.nextTimerId);
   }
 
   @override

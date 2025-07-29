@@ -18,12 +18,17 @@ class TimerEntry extends HiveObject {
   @HiveField(4)
   String? groupName;
 
+  /// Field for chaining timers
+  @HiveField(5)
+  String? nextTimerId;
+
   TimerEntry({
     required this.label,
     required this.originalSeconds,
     required this.remainingSeconds,
     this.isRunning = false,
     this.groupName,
+    this.nextTimerId,
   });
 
   Duration get originalDuration => Duration(seconds: originalSeconds);

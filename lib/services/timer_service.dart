@@ -57,7 +57,7 @@ class TimerService {
     }
   }
 
-  void _tickCountdown(TimerEntry entry) async {
+  Future<void> _tickCountdown(TimerEntry entry) async {
     if (!entry.isRunning) return;
 
     final key = entry.key.toString();
@@ -79,6 +79,21 @@ class TimerService {
         _runningTimers[key]?.cancel();
         _runningTimers.remove(key);
         await _playAlarm();
+
+        if (entry.nextTimerId != null) {
+          TimerEntry? next;
+          try {
+            next = _box.values.firstWhere(
+              (t) => t.key.toString() == entry.nextTimerId,
+            );
+          } catch (e, stack) {
+            next = null;
+          }
+
+          if (next != null) {
+            startTimer(next);
+          }
+        }
       }
     });
   }

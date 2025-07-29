@@ -1,4 +1,4 @@
-# foodtimer
+# chronomancer
 
 A new Flutter project.
 

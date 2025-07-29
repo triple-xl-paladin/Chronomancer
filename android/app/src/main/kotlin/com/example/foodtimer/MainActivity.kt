@@ -1,4 +1,4 @@
-package com.example.foodtimer
+package com.example.chronomancer
 
 import io.flutter.embedding.android.FlutterActivity
 

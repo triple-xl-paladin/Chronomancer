@@ -1,6 +1,6 @@
 {
-    "name": "foodtimer",
-    "short_name": "foodtimer",
+    "name": "chronomancer",
+    "short_name": "chronomancer",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
