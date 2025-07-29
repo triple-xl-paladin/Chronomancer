@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:chronomancer/screens/version_info_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:chronomancer/models/timer_entry.dart';
 import 'package:chronomancer/services/timer_service.dart';
@@ -339,7 +340,9 @@ class _TimerScreenState extends State<TimerScreen> {
           ),
         ],
       ),
-      body: timers.isEmpty
+      body: Stack (
+        children: [
+          timers.isEmpty
           ? const Center(child: Text('No timers. Tap + to add one.'))
           : ListView(
               children: grouped.entries.map((entry) {
@@ -443,7 +446,16 @@ class _TimerScreenState extends State<TimerScreen> {
                   ],
                 );
               }).toList(),
+          ),
+            const Align(
+              alignment: Alignment.bottomLeft,
+              child: Padding(
+                padding: EdgeInsets.all(8.0),
+                child: VersionInfoWidget(),
+              ),
             ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddDialog,
         child: const Icon(Icons.add),
