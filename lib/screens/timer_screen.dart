@@ -117,6 +117,11 @@ class _TimerScreenState extends State<TimerScreen> {
     final labelController = TextEditingController(text: entry.label);
     Duration selectedDuration = Duration(seconds: entry.originalSeconds);
     final groupController = TextEditingController(text: entry.groupName ?? '');
+    String? selectedNextTimerId = entry.nextTimerId;
+    final allOtherTimers = _timerService.getAllTimers()
+        .where((t) => t.key != entry.key)
+        .toList();
+
 
     await showDialog(
       context: context,
@@ -132,6 +137,23 @@ class _TimerScreenState extends State<TimerScreen> {
             TextField(
               controller: groupController,
               decoration: const InputDecoration(labelText: 'Group (optional)'),
+            ),
+            DropdownButtonFormField<String>(
+              value: selectedNextTimerId,
+              decoration: const InputDecoration(labelText: 'Chain to (optional)'),
+              items: [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('None'),
+                ),
+                ...allOtherTimers.map((t) => DropdownMenuItem(
+                  value: t.key.toString(),
+                  child: Text(t.label),
+                )),
+              ],
+              onChanged: (value) {
+                selectedNextTimerId = value;
+              },
             ),
             ElevatedButton(
               child: const Text('Pick Duration'),
@@ -165,6 +187,9 @@ class _TimerScreenState extends State<TimerScreen> {
               if (newLabel.isNotEmpty && selectedDuration.inSeconds > 0) {
                 entry.label = newLabel;
                 entry.groupName = newGroup;
+
+                // Assign next timer ID
+                entry.nextTimerId = selectedNextTimerId;
 
                 // Update duration and reset if changed
                 if (entry.originalSeconds != selectedDuration.inSeconds) {
@@ -333,10 +358,51 @@ class _TimerScreenState extends State<TimerScreen> {
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                     ),
-                    ...timers.map(
-                      (timer) => ListTile(
+                    ...timers.map((timer) {
+                      // Find chained timer object, if any
+                      TimerEntry? chainedTimer;
+                      if (timer.nextTimerId != null) {
+                        try {
+                          chainedTimer = _timerService
+                              .getAllTimers()
+                              .firstWhere(
+                                (t) => t.key.toString() == timer.nextTimerId,
+                          );
+                        } catch (e, stack) {
+                          chainedTimer = null;
+                          print('Error finding chained timer: $e/$stack');
+                        }
+                      }
+                      return ListTile(
                         title: Text(timer.label),
-                        subtitle: Text(_formatDuration(timer.remainingSeconds)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_formatDuration(timer.remainingSeconds)),
+                            if (chainedTimer != null)
+                              GestureDetector(
+                                onTap: () {
+                                  _showEditDialog(chainedTimer!);
+                                },
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.arrow_forward, size: 16,
+                                        color: Colors.grey),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Chains to: ${chainedTimer.label}',
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 12,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                          ],
+                        ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -371,7 +437,8 @@ class _TimerScreenState extends State<TimerScreen> {
                           ],
                         ),
                         onTap: () => _showEditDialog(timer),
-                      ),
+                      );
+                    },
                     ),
                   ],
                 );

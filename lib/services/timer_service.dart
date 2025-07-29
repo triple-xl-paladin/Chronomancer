@@ -90,7 +90,7 @@ class TimerService {
             next = null;
           }
 
-          if (next != null) {
+          if (next != null && !next.isRunning) {
             startTimer(next);
           }
         }
