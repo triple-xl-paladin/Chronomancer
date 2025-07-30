@@ -17,6 +17,7 @@ Future<void> initializeService() async {
       notificationChannelId: 'timer_service',
       initialNotificationTitle: 'Chronomancer Timer Running',
       initialNotificationContent: 'Your timers are active',
+      foregroundServiceTypes: [AndroidForegroundType.dataSync],
     ),
     iosConfiguration: IosConfiguration(),
   );
@@ -28,6 +29,10 @@ Future<void> initializeService() async {
 @pragma('vm:entry-point')
 Future<void> onStart(ServiceInstance service) async {
   if (service is AndroidServiceInstance) {
+    service.setForegroundNotificationInfo(
+      title: "Chronomancer Running",
+      content: "Background timer service active",
+    );
     service.on('stopService').listen((_) {
       service.stopSelf();
     });

@@ -21,6 +21,14 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 //import 'package:path_provider/path_provider.dart';
 import 'package:chronomancer/models/timer_entry.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+
+Future<void> requestNotificationPermission() async {
+  if (await Permission.notification.isDenied) {
+    await Permission.notification.request();
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,6 +36,7 @@ void main() async {
   Hive.registerAdapter(TimerEntryAdapter());
 
   await Hive.openBox<TimerEntry>('timers');
+  await requestNotificationPermission();
   await initializeService();
 
   runApp(const MyApp());
