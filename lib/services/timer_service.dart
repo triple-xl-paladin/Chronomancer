@@ -17,7 +17,7 @@ class TimerService {
   }
 
   Future<void> deleteTimer(TimerEntry entry) async {
-    await _box.delete(entry);
+    await _box.delete(entry.key);
   }
 
   Future<void> updateTimer(TimerEntry entry) async {
@@ -132,4 +132,45 @@ class TimerService {
       await entry.save();
     }
   }
+
+  List<TimerEntry> getSortedTimers() {
+    final timers = getAllTimers();
+    final timerMap = {for (var t in timers) t.key.toString(): t};
+
+    final chainedTargets = timers.map((t) => t.nextTimerId).whereType<String>().toSet();
+    final chainHeads = timers.where((t) => !chainedTargets.contains(t.key.toString())).toList();
+
+    List<TimerEntry> resolveChain(TimerEntry head) {
+      final chain = <TimerEntry>[];
+      var current = head;
+      while (true) {
+        chain.add(current);
+        final nextId = current.nextTimerId;
+        if (nextId == null || !timerMap.containsKey(nextId)) break;
+        current = timerMap[nextId]!;
+      }
+      return chain;
+    }
+
+    final seen = <String>{};
+    final ordered = <TimerEntry>[];
+
+    for (final head in chainHeads) {
+      final chain = resolveChain(head);
+      for (final timer in chain) {
+        if (seen.add(timer.key.toString())) {
+          ordered.add(timer);
+        }
+      }
+    }
+
+    for (final timer in timers) {
+      if (!seen.contains(timer.key.toString())) {
+        ordered.add(timer);
+      }
+    }
+
+    return ordered;
+  }
+
 }
