@@ -14,8 +14,10 @@
 // along with Chronomancer.  If not, see <https://www.gnu.org/licenses/>.
 
 
+import 'package:chronomancer/services/background_service.dart';
 import 'package:flutter/material.dart';
 import 'package:chronomancer/screens/timer_screen.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 //import 'package:path_provider/path_provider.dart';
 import 'package:chronomancer/models/timer_entry.dart';
@@ -26,6 +28,7 @@ void main() async {
   Hive.registerAdapter(TimerEntryAdapter());
 
   await Hive.openBox<TimerEntry>('timers');
+  await initializeService();
 
   runApp(const MyApp());
 }

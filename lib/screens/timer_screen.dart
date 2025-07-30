@@ -19,6 +19,8 @@ import 'package:chronomancer/screens/version_info_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:chronomancer/models/timer_entry.dart';
 import 'package:chronomancer/services/timer_service.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/adapters.dart';
 
 import 'about_dialog_widget.dart';
 import 'timer_background_bar_widget.dart';
@@ -38,16 +40,10 @@ class _TimerScreenState extends State<TimerScreen> {
   void initState() {
     super.initState();
     _timerService = TimerService();
-    // Start UI ticker to update every second
-    _ticker = Timer.periodic(
-      const Duration(seconds: 1),
-      (_) => setState(() {}),
-    );
   }
 
   @override
   void dispose() {
-    _ticker.cancel();
     _timerService.dispose();
     super.dispose();
   }
@@ -340,15 +336,6 @@ class _TimerScreenState extends State<TimerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final timers = _timerService.getSortedTimers();
-
-    final grouped = <String?, List<TimerEntry>>{};
-
-    for (var timer in timers) {
-      final group = timer.groupName ?? '__ungrouped__';
-      grouped.putIfAbsent(group, () => []).add(timer);
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chronomancer'),
@@ -369,144 +356,175 @@ class _TimerScreenState extends State<TimerScreen> {
           ),
         ],
       ),
-      body: Stack (
-        children: [
-          timers.isEmpty
-          ? const Center(child: Text('No timers. Tap + to add one.'))
-          : ListView(
-              children: grouped.entries.map((entry) {
-                final groupTitle = entry.key == '__ungrouped__'
-                    ? 'Ungrouped Timers'
-                    : entry.key!;
-                final timers = entry.value;
+      body: ValueListenableBuilder<Box<TimerEntry>>(
+        valueListenable: Hive.box<TimerEntry>('timers').listenable(),
+        builder: (context, box, _) {
+          final timers = box.values.toList();
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        _showAddDialog(prefilledGroup: groupTitle == 'Ungrouped Timers' ? '' : groupTitle);
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                        child: Text(
-                          groupTitle,
-                          style: Theme.of(context).textTheme.titleLarge,
+          final grouped = <String?, List<TimerEntry>>{};
+          for (var timer in timers) {
+            final group = timer.groupName ?? '__ungrouped__';
+            grouped.putIfAbsent(group, () => []).add(timer);
+          }
+
+          if (timers.isEmpty) {
+            return const Center(child: Text('No timers. Tap + to add one.'));
+          }
+
+          return Stack(
+            children: [
+              //timers.isEmpty
+              //? const Center(child: Text('No timers. Tap + to add one.'))
+              ListView(
+                children: grouped.entries.map((entry) {
+                  final groupTitle = entry.key == '__ungrouped__'
+                      ? 'Ungrouped Timers'
+                      : entry.key!;
+                  final timers = entry.value;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          _showAddDialog(
+                              prefilledGroup: groupTitle == 'Ungrouped Timers'
+                                  ? ''
+                                  : groupTitle);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                          child: Text(
+                            groupTitle,
+                            style: Theme
+                                .of(context)
+                                .textTheme
+                                .titleLarge,
+                          ),
                         ),
                       ),
-                    ),
-                    ...timers.map((timer) {
-                      // Find chained timer object, if any
-                      TimerEntry? chainedTimer;
-                      if (timer.nextTimerId != null) {
-                        try {
-                          chainedTimer = _timerService
-                              .getAllTimers()
-                              .firstWhere(
-                                (t) => t.key.toString() == timer.nextTimerId,
-                          );
-                        } catch (e, stack) {
-                          chainedTimer = null;
-                          print('Error finding chained timer: $e/$stack');
+                      ...timers.map((timer) {
+                        // Find chained timer object, if any
+                        TimerEntry? chainedTimer;
+                        if (timer.nextTimerId != null) {
+                          try {
+                            chainedTimer = _timerService
+                                .getAllTimers()
+                                .firstWhere(
+                                  (t) =>
+                              t.key.toString() == timer.nextTimerId,
+                            );
+                          } catch (e, stack) {
+                            chainedTimer = null;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error finding chained timer: $e/$stack')),
+                            );
+                          }
                         }
-                      }
 
-                      double progress = timer.originalSeconds > 0
-                          ? timer.remainingSeconds / timer.originalSeconds
-                          : 0.0;
+                        double progress = timer.originalSeconds > 0
+                            ? timer.remainingSeconds / timer.originalSeconds
+                            : 0.0;
 
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 16),
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                child: TimerBackgroundBar(progress: progress.clamp(0.0, 1.0)),
+                        return Padding(
+                          padding: const EdgeInsets.only(left: 16),
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 2),
+                                  child: TimerBackgroundBar(
+                                      progress: progress.clamp(0.0, 1.0)),
+                                ),
                               ),
-                            ),
 
-                            ListTile(
-                              title: Text(timer.label),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(_formatDuration(timer.remainingSeconds)),
-                                  if (chainedTimer != null)
-                                    GestureDetector(
-                                      onTap: () {
-                                        _showEditDialog(chainedTimer!);
-                                      },
-                                      child: Row(
-                                        children: [
-                                          const Icon(Icons.arrow_forward, size: 16,
-                                              color: Colors.grey),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'This timer runs before: ${chainedTimer.label}',
-                                            style: const TextStyle(
-                                              color: Colors.grey,
-                                              fontSize: 12,
-                                              fontStyle: FontStyle.italic,
+                              ListTile(
+                                title: Text(timer.label),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment
+                                      .start,
+                                  children: [
+                                    Text(_formatDuration(
+                                        timer.remainingSeconds)),
+                                    if (chainedTimer != null)
+                                      GestureDetector(
+                                        onTap: () {
+                                          _showEditDialog(chainedTimer!);
+                                        },
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                                Icons.arrow_forward, size: 16,
+                                                color: Colors.grey),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'This timer runs before: ${chainedTimer
+                                                  .label}',
+                                              style: const TextStyle(
+                                                color: Colors.grey,
+                                                fontSize: 12,
+                                                fontStyle: FontStyle.italic,
+                                              ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                ],
-                              ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: Icon(
-                                      timer.isRunning
-                                          ? Icons.pause
-                                          : Icons.play_arrow,
-                                    ),
-                                    onPressed: () {
-                                      setState(() {
+                                  ],
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(
                                         timer.isRunning
-                                            ? _pauseTimer(timer)
-                                            : _startTimer(timer);
-                                      });
-                                    },
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.refresh),
-                                    onPressed: () {
-                                      _resetTimer(timer);
-                                      setState(() {});
-                                    },
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete),
-                                    onPressed: () {
-                                      _deleteTimer(timer);
-                                      setState(() {});
-                                    },
-                                  ),
-                                ],
+                                            ? Icons.pause
+                                            : Icons.play_arrow,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          timer.isRunning
+                                              ? _pauseTimer(timer)
+                                              : _startTimer(timer);
+                                        });
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.refresh),
+                                      onPressed: () {
+                                        _resetTimer(timer);
+                                        //setState(() {});
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete),
+                                      onPressed: () {
+                                        _deleteTimer(timer);
+                                        //setState(() {});
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                onTap: () => _showEditDialog(timer),
                               ),
-                              onTap: () => _showEditDialog(timer),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    ),
-                  ],
-                );
-              }).toList(),
-          ),
-            const Align(
-              alignment: Alignment.bottomLeft,
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: VersionInfoWidget(),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                  );
+                }).toList(),
               ),
-            ),
-        ],
+              const Align(
+                alignment: Alignment.bottomLeft,
+                child: Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: VersionInfoWidget(),
+                ),
+              ),
+            ],
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddDialog,
