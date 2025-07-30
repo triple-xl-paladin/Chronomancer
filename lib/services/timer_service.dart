@@ -1,3 +1,19 @@
+// This file is part of Chronomancer.
+//
+// Chronomancer is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Chronomancer is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Chronomancer.  If not, see <https://www.gnu.org/licenses/>.
+
+
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -7,6 +23,10 @@ class TimerService {
   final Box<TimerEntry> _box = Hive.box<TimerEntry>('timers');
   final AudioPlayer _audioPlayer = AudioPlayer();
   final Map<String, Timer> _runningTimers = {};
+
+  // Queue of alarms to play (could store timer labels or IDs if you want)
+  final List<Future<void> Function()> _alarmQueue = [];
+  bool _isPlayingAlarm = false;
 
   TimerService();
 
@@ -86,7 +106,7 @@ class TimerService {
             next = _box.values.firstWhere(
               (t) => t.key.toString() == entry.nextTimerId,
             );
-          } catch (e, stack) {
+          } catch (e) {
             next = null;
           }
 
@@ -98,8 +118,57 @@ class TimerService {
     });
   }
 
-  Future<void> _playAlarm() async {
+  Future<void> _playAlarm({int repeatCount = 3}) async {
+    // Add a new alarm job to the queue
+    _alarmQueue.add(() => _playAlarmInternal(repeatCount));
+
+    // If no alarm is playing, start playing
+    if (!_isPlayingAlarm) {
+      _playNextAlarmInQueue();
+    }
+  }
+
+  Future<void> _playAlarmInternal(int repeatCount) async {
+    _isPlayingAlarm = true;
+
+    int playCounter = 0;
+    final completer = Completer<void>();
+
+    // Cancel previous listeners (important)
+    _audioPlayer.stop();
+    await _audioPlayer.setReleaseMode(ReleaseMode.stop);
+
+    StreamSubscription? sub;
+
+    sub = _audioPlayer.onPlayerComplete.listen((event) async {
+      playCounter++;
+      if (playCounter < repeatCount) {
+        await _audioPlayer.play(AssetSource('sounds/alarm.wav'));
+      } else {
+        await sub?.cancel();
+        completer.complete();
+      }
+    });
+
+    // Start first play
     await _audioPlayer.play(AssetSource('sounds/alarm.wav'));
+
+    // Wait until all repeats are done
+    await completer.future;
+
+    _isPlayingAlarm = false;
+  }
+
+  void _playNextAlarmInQueue() {
+    if (_alarmQueue.isEmpty) return;
+
+    final nextAlarm = _alarmQueue.removeAt(0);
+    nextAlarm().then((_) {
+      // When current alarm done, check queue for next
+      if (_alarmQueue.isNotEmpty) {
+        _playNextAlarmInQueue();
+      }
+    });
   }
 
   void dispose() {
