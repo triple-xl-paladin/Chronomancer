@@ -67,3 +67,4 @@ bin/cache/
 # Personal
 *.key
 .env
+/releases/
